@@ -1,0 +1,269 @@
+﻿@rendermode InteractiveServer
+@inject TaskService TaskService
+@inject IHttpContextAccessor HttpContextAccessor
+
+<DxPopup @bind-Visible="@Visible"
+         HeaderText="Edytuj Zadanie"
+         CloseButtonClick="OnCloseButtonClick"
+         ShowFooter="true" CssClass="task-popup">
+    <BodyTemplate Context="PopupContext">
+        <div style="padding: 1rem; width: 860px">
+            <DxFormLayout>
+                <DxFormLayoutItem Caption="Nazwa zadania:" ColSpanMd="12">
+                    <Template>
+                        <DxTextBox @bind-Text="@Task.Name" />
+                    </Template>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Opis:" ColSpanMd="12">
+                    <Template>
+                        <DxMemo @bind-Text="@Task.Description"
+                                Rows="8"
+                                Columns="50"
+                                CssClass="cw-320"
+                                InputId="memoCustomSize" />
+                    </Template>
+                </DxFormLayoutItem>
+            <div style="width: 400px; margin-top: 40px">
+                <div class="form-view">
+                <DxFormLayoutItem Caption="Priorytet:" ColSpanMd="12">
+                    <Template>
+                        <PriorityComboBox
+                            TaskPriority="Task.Priority"
+                            SelectedPriorityChanged="(taskPriority) => Task.Priority = taskPriority"
+                        ></PriorityComboBox>
+                    </Template>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Status:" ColSpanMd="12">
+                    <Template>
+                        <StatusComboBox
+                            Status="Task.Status"
+                            SelectedStatusChanged="(status) => Task.Status = status"></StatusComboBox>
+                    </Template>
+                </DxFormLayoutItem>
+                </div>
+                <div class="form-view">
+                <DxFormLayoutItem Caption="Projekt:" ColSpanMd="12">
+                    <Template>
+                        <ProjectComboBox
+                            Project="Task.Project"
+                            SelectedProjectChanged="(project) => Task.Project = project"
+                        ></ProjectComboBox>
+                    </Template>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Przydzielono do:" ColSpanMd="12">
+                    <Template>
+                        <UserComboBox SelectedUser="Task.AssignedTo"
+                            SelectedUserChanged="(user) => Task.AssignedTo = user"
+                        ></UserComboBox>
+                    </Template>
+                </DxFormLayoutItem>
+                </div>
+                <div class="form-view">
+                <DxFormLayoutItem Caption="Data rozpoczęcia:" ColSpanMd="12">
+                    <Template>
+                        <DxDateEdit @bind-Date="@Task.StartAt"
+                                    TimeSectionVisible="true"
+                                    TimeSectionScrollPickerFormat="HH mm"/>
+                    </Template>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Termin wykonania:" ColSpanMd="12">
+                    <Template>
+                        <DxDateEdit @bind-Date="@Task.DueDate"
+                                    TimeSectionVisible="true"
+                                    TimeSectionScrollPickerFormat="HH mm" />
+                    </Template>
+                </DxFormLayoutItem>
+                </div>
+                <DxFormLayoutItem Caption="Tagi:" ColSpanMd="12">
+                    <Template Context="CategoryContext">
+                        <div class="category">
+                            <div style="width: 90%;">
+                                    <TagBox TaskId="@Task.Id"
+                                             SelectedTags="@Tags"
+                                             SelectedTagsChanged="OnTagsChanged"> 
+                                    </TagBox>
+                            </div>
+                            <div style="width: 10%; box-sizing: border-box;" class="d-flex justify-content-center align-content-center">
+                                <DxButton CssClass="grid-delete-btn"
+                                          IconCssClass="grid-icon grid-icon-add"
+                                          RenderStyle="ButtonRenderStyle.Link"
+                                          aria-label="Add"
+                                          Click="ShowTagForm" />
+                            </div>
+                        </div>
+                    </Template>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Dodał:" ColSpanMd="12">
+                    <Template>
+                        <div class="task-info">
+                        <span>@Task.CreatedBy</span>
+                        </div>
+                    </Template>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Data utworzenia:" ColSpanMd="12">
+                    <Template>
+                        <div class="task-info">
+                        <span>@Task.CreatedAt</span>
+                        </div>
+                    </Template>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Data ostatniej aktualizacji:" ColSpanMd="12">
+                    <Template>
+                        <div class="task-info">
+                        <span>@Task.UpdatedAt</span>
+                            </div>
+                    </Template>
+                </DxFormLayoutItem>
+        </div>
+                <DxSchedulerCustomFormLayoutItem>
+                    <Template>
+                        <div class="comments">
+                            @if (Task.Comments is not null)
+                            {
+                                @foreach (Comment comment in Task.Comments)
+                                {
+                                    <div class="message-box">
+                                        <div class="message-details">
+                                        <p>
+                                            @comment.User?.FullName
+                                            
+                                        </p>
+                                            <p>
+                                                
+                                                @comment.CreatedAt
+                                            </p>
+                                        </div>
+                                    <div class="message-text">
+                                        <p>
+                                            @comment.Message
+                                        </p>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
+
+                        <DxFormLayout CaptionPosition=@CaptionPosition.Vertical>
+                            <DxFormLayoutItem Caption="Dodaj komentarz" ColSpanMd="12" BeginRow="true" CssClass="add-comment">
+                                <DxTextBox Name="Message" @bind-Text="Message" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem ColSpanMd="12" BeginRow="true">
+                                <DxButton CssClass="w-40" Text="Dodaj" Click="OnAddCommentClick"></DxButton>
+                            </DxFormLayoutItem>
+                        </DxFormLayout>
+                    </Template>
+                </DxSchedulerCustomFormLayoutItem>
+            </DxFormLayout>
+        </div>
+    </BodyTemplate>
+    <FooterContentTemplate>
+        <DxButton RenderStyle="ButtonRenderStyle.Primary" Text="OK"
+                  Click="OnOkButtonClick" />
+    </FooterContentTemplate>
+</DxPopup>
+
+<TagForm Tag="tag" Visible="TagFormVisible" SetTagVisiblity="SetTagVisiblity" /> 
+
+@code {
+    Tag tag;
+    private List<Tag> Tags { get; set; } = new List<Tag>();
+    public bool TagFormVisible { get; set; } = false;
+    public TaskPriority TaskPriority { get; set; }
+
+    public string Message { get; set; }
+
+    [Parameter]
+    public bool Visible { get; set; } = false;
+
+    [Parameter]
+    public TaskToDo Task { get; set; }
+
+    User AssignedTo { get; set; }
+
+    [Parameter]
+    public Action<bool> SetVisiblity { get; set; }
+
+    [Parameter]
+    public System.Action OnSave { get; set; }
+
+    [Parameter]
+    public bool TagVisible { get; set; } = false;
+
+    [Parameter]
+    public Project Project { get; set; }
+
+    private List<Tag> _selectedTags;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+    }
+
+    void OnStartAtChanged(DateTime? date)
+    {
+        Task.StartAt = date;
+    }
+
+    void OnDueDateChanged(DateTime? date)
+    {
+        Task.DueDate = date;
+    }   
+
+    void OnAddCommentClick()
+    {
+        Comment comment = new Comment
+        {
+            Message = Message,
+            UserId = GetCurrentUserId()
+        };
+
+        Task.Comments.Add(comment);
+    }
+
+    private int GetCurrentUserId()
+    {
+        var claimId = HttpContextAccessor.HttpContext.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
+        return int.Parse(claimId.Value);
+    }
+
+    void OnOkButtonClick()
+    {
+        TaskService.UpdateTaskToDo(Task, _selectedTags);
+        OnSave?.Invoke();
+        SetVisiblity?.Invoke(false);
+    }
+
+    void OnCloseButtonClick()
+    {
+        SetVisiblity?.Invoke(false);
+    }
+
+    public void SetTagVisiblity(bool visibility)
+    {
+        TagFormVisible = visibility;
+        StateHasChanged();
+    }
+
+    private void ShowTagForm()
+    {
+        TagFormVisible = true;
+    }
+
+   private void OnTagsChanged(IEnumerable<Tag> newTags)
+   {
+        // Przypisz nową listę tagów do Task.TaskTags
+        _selectedTags = newTags.ToList();
+   }
+
+     private async Task OnTagsChanged(List<Tag> updatedTags)
+     {
+         Tags = updatedTags;
+     }
+
+    
+}
+
+
+
+
+    

@@ -1,0 +1,284 @@
+﻿@using System.Globalization
+@rendermode InteractiveServer
+@inject TaskService TaskService
+@inject UserService UserService
+@inject ProjectService ProjectService
+@inject NavigationManager Navigation
+@inject IDbContextFactory<ProjectContext> ContextFactory;
+
+<DxGrid @ref="Grid"
+        PageSize="20"
+        Data="DataSource"
+        KeyFieldName="Id"
+        ValidationEnabled="false"
+        EditMode="GridEditMode.EditCell"
+        EditModelSaving="Grid_EditModelSaving"
+        DataItemDeleting="Grid_DataItemDeleting"
+        CustomizeEditModel="Grid_CustomizeEditModel"
+        ColumnResizeMode="GridColumnResizeMode.NextColumn"
+        ShowGroupPanel="true"
+        TextWrapEnabled="false"
+        HighlightRowOnHover="true">
+
+    <Columns>
+        <DxGridDataColumn FieldName="Name" Caption="Nazwa" MinWidth="350" />
+        <DxGridDataColumn FieldName="Status" MinWidth="80">
+            <CellDisplayTemplate>
+                @{
+                    var status = (Status)context.Value;
+                    var backgroundColor = GetStatusBackgroundColor(status);
+                }
+                <div style="background-color: @backgroundColor; padding: 5px; width: 100%;">
+                    @status.ToString()
+                </div>
+            </CellDisplayTemplate>
+        </DxGridDataColumn>
+
+        <DxGridDataColumn FieldName="AssignedTo" Caption="Przydzielono do" MinWidth="150">
+            <EditSettings>
+                <DxComboBoxSettings Data="Users" TextFieldName="FullName" />
+            </EditSettings>
+        </DxGridDataColumn>
+        <DxGridDataColumn FieldName="Priority" Caption="Priorytet" MinWidth="200">
+            <CellDisplayTemplate>
+                @{
+                    var priority = (TaskPriority)context.Value;
+                    var backgroundColor = GetPriorityBackgroundColor(priority);
+                }
+                <div style="background-color: @backgroundColor; padding: 5px; width: 100%;">
+                    @priority.ToString()
+                </div>
+            </CellDisplayTemplate>
+        </DxGridDataColumn>
+        <DxGridDataColumn FieldName="CreatedById" Caption="Dodał" MinWidth="150">
+            <EditSettings>
+                <DxComboBoxSettings Data="Users" ValueFieldName="Id" TextFieldName="FullName" />
+            </EditSettings>
+        </DxGridDataColumn>
+        <DxGridDataColumn FieldName="StartAt" Caption="Data rozpoczęcia" Width="10%" MinWidth="80" DisplayFormat="dd/MM/yyyy HH:mm">
+            <EditSettings>
+                <DxDateEditSettings TimeSectionVisible="true"
+                                    Mask="@DateTimeMask.ShortDateTime"
+                                    TimeSectionScrollPickerFormat="HH mm" />
+            </EditSettings>
+        </DxGridDataColumn>
+        <DxGridDataColumn FieldName="DueDate" Caption="Termin wykonania" Width="10%" MinWidth="80" DisplayFormat="dd/MM/yyyy HH:mm">
+            <EditSettings>
+                <DxDateEditSettings TimeSectionVisible="true"
+                                    Mask="@DateTimeMask.ShortDateTime"
+                                    TimeSectionScrollPickerFormat="HH mm" />
+            </EditSettings>
+            <CellDisplayTemplate>
+                @{
+                    string style = string.Empty;
+                    DateTime? dueDate = context.Value as DateTime?;
+                    if (dueDate is not null)
+                    {
+                        style = dueDate < DateTime.Now ? "color: red;" : string.Empty;
+                    }
+                }
+
+                @if(dueDate is DateTime d)
+                {
+                    if (!string.IsNullOrWhiteSpace(style))
+                    {
+                        <span style="@style">@d.ToString("dd/MM/yyyy HH:mm")</span>
+                    }
+                    else
+                    {
+                        <span>@d.ToString("dd/MM/yyyy HH:mm")</span>
+                    }
+                }
+            </CellDisplayTemplate>
+        </DxGridDataColumn>
+        <DxGridCommandColumn Width="30px">
+            <HeaderTemplate>
+                <div class="grid-cell-align-center">
+                </div>
+            </HeaderTemplate>
+            <CellDisplayTemplate>
+                <div class="grid-cell-align-center">
+                    <DxButton IconCssClass="grid-icon grid-icon-open"
+                              RenderStyle="ButtonRenderStyle.None"
+                              Click="@(() => ShowForm(context.VisibleIndex))" />
+                </div>
+            </CellDisplayTemplate>
+            <CellEditTemplate>
+                <div class="grid-cell-align-center">
+                    <DxButton Enabled="false"
+                              CssClass="grid-disabled-button"
+                              IconCssClass="grid-icon grid-icon-open"
+                              RenderStyle="ButtonRenderStyle.Link" />
+                </div>
+            </CellEditTemplate>
+        </DxGridCommandColumn>
+        <DxGridCommandColumn Width="30px">
+            <HeaderTemplate>
+                <div class="grid-cell-align-center">
+                    <DxButton CssClass="grid-delete-btn"
+                              IconCssClass="grid-icon grid-icon-add"
+                              RenderStyle="ButtonRenderStyle.Link"
+                              aria-label="Add"
+                              Click="@(() => Grid.StartEditNewRowAsync())" />
+                </div>
+            </HeaderTemplate>
+            <CellDisplayTemplate>
+                <div class="grid-cell-align-center">
+                    <DxButton IconCssClass="grid-icon grid-icon-delete"
+                              CssClass="grid-delete-btn"
+                              RenderStyle="ButtonRenderStyle.Link"
+                              aria-label="Delete"
+                              Click="@(() => Grid.ShowRowDeleteConfirmation(context.VisibleIndex))" />
+                </div>
+            </CellDisplayTemplate>
+            <CellEditTemplate>
+                <div class="grid-cell-align-center">
+                    <DxButton Enabled="false"
+                              CssClass="grid-disabled-button"
+                              IconCssClass="grid-icon grid-icon-delete"
+                              aria-label="Delete"
+                              RenderStyle="ButtonRenderStyle.Link" />
+                </div>
+            </CellEditTemplate>
+        </DxGridCommandColumn>
+    </Columns>
+</DxGrid>
+
+<TaskToDoForm Task="Task" Visible="TaskToDoFormVisible" SetVisiblity="SetVisiblity" />
+
+
+@code {
+    [Parameter]
+    public int ProjectId { get; set; }
+
+
+    IGrid Grid { get; set; }
+    IEnumerable<TaskToDo> DataSource { get; set; }
+    List<User> Users { get; set; }
+    
+    public bool TaskToDoFormVisible { get; set; } = false;
+    public TaskToDo Task { get; set; }
+    List<Project> Projects { get; set; } = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        Users = await UserService.GetUsersAsync();
+        // Projects = await ProjectService.GetAllProjectsAsync();
+        // DataSource = await TaskService.GetAllTasksToDoAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await UpdateDataAsync();
+        StateHasChanged();
+    }
+
+    //lista
+
+    public void SetVisiblity(bool visibility)
+    {
+        TaskToDoFormVisible = visibility;
+        StateHasChanged();
+    }
+
+    void Grid_CustomizeEditModel(GridCustomizeEditModelEventArgs e)
+    {
+        if (e.IsNew)
+        {
+            var newTask = (TaskToDo)e.EditModel;
+            newTask.Name = "Nowe Zadanie";
+            newTask.ProjectId = ProjectId;
+            newTask.CreatedAt = DateTime.UtcNow;
+        }
+    }
+
+    async Task Grid_EditModelSaving(GridEditModelSavingEventArgs e)
+    {
+        TaskToDo editableTask = (TaskToDo)e.EditModel;
+        if (e.IsNew)
+        {
+            using ProjectContext context = await ContextFactory.CreateDbContextAsync();
+
+            DateOnly dateOnlyNow = new DateOnly(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day);
+            TimeOnly timeOnlyStartAt = new TimeOnly(DateTime.Now.Hour + 1, 0, 0);
+            TimeOnly timeOnlyDayEnd = new TimeOnly(23, 59, 0);
+
+            TaskToDo taskToDo = new TaskToDo();
+            taskToDo.Name = editableTask.Name;
+            taskToDo.Description = editableTask.Description;
+            taskToDo.Status = editableTask.Status;
+            taskToDo.Priority = editableTask.Priority;
+            taskToDo.AssignedToId = editableTask.AssignedTo?.Id;
+            taskToDo.CreatedById = editableTask.CreatedBy?.Id;
+            taskToDo.ProjectId = editableTask.ProjectId;
+            //taskToDo.ProjectId = task.Project.Id;
+
+            if (editableTask.StartAt is null)
+            {
+                taskToDo.StartAt = new DateTime(dateOnlyNow, timeOnlyStartAt);
+            }
+            else
+            {
+                taskToDo.StartAt = editableTask.StartAt;
+            }
+
+            if (editableTask.DueDate is null)
+            {
+                taskToDo.DueDate = new DateTime(dateOnlyNow, timeOnlyDayEnd);
+            }
+            else
+            {
+                taskToDo.DueDate = editableTask.DueDate;
+            }
+
+            taskToDo.CreatedAt = DateTime.UtcNow;
+            context.TasksToDo.Add(taskToDo);
+            await context.SaveChangesAsync();
+        }
+        else
+        {
+            await TaskService.UpdateTaskToDoAsync(editableTask);
+        }
+        await UpdateDataAsync();
+    }
+
+    async Task Grid_DataItemDeleting(GridDataItemDeletingEventArgs e)
+    {
+        await TaskService.DeleteTaskToDoAsync((TaskToDo)e.DataItem);
+        await UpdateDataAsync();
+    }
+
+     async Task UpdateDataAsync()
+     {
+        DataSource = await TaskService.GetTasksByProjectIdAsync(ProjectId);
+     }
+
+    private void ShowForm(int index)
+    {
+        Task = Grid.GetDataItem(index) as TaskToDo;
+        TaskToDoFormVisible = true;
+    }
+
+    public static string GetPriorityBackgroundColor(TaskPriority priority)
+    {
+        return priority switch
+        {
+
+            TaskPriority.Niski => "#16C47F",
+            TaskPriority.Średni => "#FFD65A",
+            TaskPriority.Wysoki => "#F93827",
+            _ => "transparent"
+        };
+    }
+
+    public static string GetStatusBackgroundColor(Status status)
+    {
+        return status switch
+        {
+            Status.ToDo => "#DEAA79",
+            Status.InProgress => "#789ECC",
+            Status.Done => "#B1C29E",
+            _ => "transparent"
+        };
+    }
+}

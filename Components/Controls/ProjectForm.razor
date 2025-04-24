@@ -1,0 +1,146 @@
+﻿@rendermode InteractiveServer
+@inject ProjectService ProjectService
+
+<DxPopup
+    @bind-Visible="@Visible"
+    ShowFooter="true"
+    HeaderText="Edytuj Projekt"
+    CloseButtonClick="OnCloseButtonClick">
+    <BodyContentTemplate Context="PopupContext">
+    <BodyTemplate>
+        <div style="padding-top: 1rem; padding-bottom: 1rem">
+            <DxFormLayout>
+                <DxFormLayoutItem Caption="Nazwa zadania:" ColSpanMd="12">
+                    <Template Context="TaskContext">
+                        <DxTextBox @bind-Text="@Project.Name" />
+                    </Template>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Opis:" ColSpanMd="12">
+                    <Template Context="DescriptionContext">
+                            <DxMemo @bind-Text="@Project.Description"
+                                    Rows="8"
+                                    Columns="50"
+                                    CssClass="cw-320"
+                                    InputId="memoCustomSize" />
+                    </Template>
+                </DxFormLayoutItem>
+                   
+                <DxFormLayoutItem Caption="Kategoria:" ColSpanMd="12">
+                        <Template Context="CategoryContext">
+                            <div class="category">
+                                <div style="width: 90%; box-sizing: border-box;" class="d-flex justify-content-end">
+                                    <div style="width: 90%; box-sizing: border-box;">
+                                        <CategoryComboBox SelectedCategory="Project.Category"
+                                                          SelectedCategoryChanged="(category) => Project.CategoryId = category?.Id"></CategoryComboBox>
+                                    </div>
+                                </div>
+                                <div style="width: 10%; box-sizing: border-box;" class="d-flex justify-content-center align-content-center">
+                                    <DxButton CssClass="grid-delete-btn"
+                                              IconCssClass="grid-icon grid-icon-add"
+                                              RenderStyle="ButtonRenderStyle.Link"
+                                                  aria-label="Add" 
+                                                  Click="ShowCategoryForm" />
+                                </div>
+                            </div>
+                        </Template>
+                    </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Dodaj użytkownika:" ColSpanMd="12">
+                    <Template Context="UserContext">
+                            <CollaboratorsMultipleListBox SelectedUsers="SelectedUsers"
+                                ValuesChanged="OnValuesChanged" />
+                    </Template>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Data rozpoczęcia:" ColSpanMd="12">
+                    <Template Context="StartDateContext">
+                            <DxDateEdit @bind-Date="@Project.StartAt"
+                                        TimeSectionVisible="true"
+                                        TimeSectionScrollPickerFormat="HH mm" />
+                    </Template>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Termin wykonania:" ColSpanMd="12">
+                        <Template Context="EndDateContext">
+                            <DxDateEdit @bind-Date="@Project.DueDate"
+                                        TimeSectionVisible="true"
+                                        TimeSectionScrollPickerFormat="HH mm" />
+                    </Template>
+                </DxFormLayoutItem>
+            </DxFormLayout>
+        </div>
+    </BodyTemplate>
+    </BodyContentTemplate>
+    <FooterContentTemplate>
+        <DxButton CssClass="popup-button my-1 ms-2" RenderStyle="ButtonRenderStyle.Primary" Text="OK" Click="OnOkButtonClick" />
+        <DxButton CssClass="popup-button my-1 ms-2" RenderStyle="ButtonRenderStyle.Secondary" Text="Cancel" Click="@(() => Visible = false)" />
+    </FooterContentTemplate>
+</DxPopup>
+
+<CategoryForm Category="category" Visible="CategoryFormVisible" SetCategoryVisiblity="SetCategoryVisiblity" />
+
+@code {
+    Category category;
+
+    public bool CategoryFormVisible { get; set; } = false;
+
+    [Parameter]
+    public bool Visible { get; set; } = false;
+
+    [Parameter]
+    public Project Project { get; set; }
+
+    [Parameter]
+    public Action<bool> SetVisiblity { get; set; }
+
+    [Parameter]
+    public Func<Task> SavedAsync { get; set; }
+
+    public List<User> SelectedUsers { get; set; } = [];
+
+    public bool ProjectFormVisible { get; set; } = false;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        SelectedUsers = Project?.UserProjects?.Select(x => x.Username).ToList() ?? [];
+    }
+
+
+    void OnValuesChanged(IEnumerable<User> users)
+    {
+        SelectedUsers = users.ToList();
+    }
+
+    async Task OnOkButtonClick()
+    {
+        // Można tu dodatkowo zapisać zmiany lub wykonać inne akcje
+        await SaveProjectChanges();
+        SetVisiblity?.Invoke(false);
+    }
+
+    async Task SaveProjectChanges()
+    {
+        // Możesz wywołać metodę aktualizującą w bazie danych
+        await ProjectService.UpdateProjectAsync(Project, SelectedUsers);
+        await SavedAsync?.Invoke();
+    }
+
+    void OnCloseButtonClick()
+    {
+        SetVisiblity?.Invoke(false);
+    }
+
+    private void ShowCategoryForm()
+    {
+        CategoryFormVisible = true;
+    }
+
+    public void SetCategoryVisiblity(bool visibility)
+    {
+        CategoryFormVisible = visibility;
+        StateHasChanged();
+    }
+}

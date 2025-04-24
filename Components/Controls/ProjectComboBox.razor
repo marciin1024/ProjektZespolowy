@@ -1,0 +1,32 @@
+﻿@rendermode InteractiveServer
+@inject ProjectService ProjectService
+
+<DxComboBox Data="@Projects"
+        SearchMode="@SearchMode"
+        SearchFilterCondition="@SearchFilterCondition"
+        SearchTextParseMode="@SearchTextParseMode"
+        Value="@Project"
+        TextFieldName="Name"
+            ValueChanged="@((Project project) => SelectedProjectChanged?.Invoke(project))"
+        CssClass="cw-480"
+        InputId="ProjectsComboBox" />
+
+@code {
+    [Parameter]
+    public Project Project { get; set; }
+
+    [Parameter]
+    public Action<Project> SelectedProjectChanged { get; set; }
+
+    public List<Project> Projects { get; set; } = [];
+
+    ListSearchMode SearchMode { get; set; } = ListSearchMode.AutoSearch;
+    ListSearchFilterCondition SearchFilterCondition { get; set; } = ListSearchFilterCondition.Contains;
+    ListSearchTextParseMode SearchTextParseMode { get; set; } = ListSearchTextParseMode.GroupWordsByAnd;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Projects = await ProjectService.GetAllProjectsAsync();
+        await base.OnInitializedAsync();
+    }
+}

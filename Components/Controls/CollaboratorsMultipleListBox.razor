@@ -1,0 +1,71 @@
+﻿@rendermode InteractiveServer
+@inject UserService UserService
+
+<DxDropDownBox @bind-Value="Value"
+               QueryDisplayText="QueryText"
+               DropDownWidthMode="DropDownWidthMode.EditorWidth"
+               InputId="ddbMultipleSelectionListBox"
+               CssClass="cw-480"
+               >
+    <DropDownBodyTemplate>
+        <DxListBox Data="@ListBoxData" TData="User" TValue="User"
+                   Values="@GetListBoxValues(context.DropDownBox)"
+                   ValuesChanged="@(values => ListBoxValuesChanged(values, context.DropDownBox))"
+                   TextFieldName="@nameof(User.FullName)"
+                   SelectionMode="ListBoxSelectionMode.Multiple"
+                   ShowSearchboxes="true"
+                   ShowCheckboxes="true"
+                   CssClass="templateListbox"
+                   >
+        </DxListBox>
+    </DropDownBodyTemplate>
+</DxDropDownBox>
+
+
+@code {
+
+    private DxListBox<User, User> ListBox { get; set; }
+
+    [Parameter]
+    public Action<IEnumerable<User>> ValuesChanged { get; set; }
+
+    [Parameter]
+    public List<User> SelectedUsers { get; set; }
+
+    List<User> ListBoxData { get; set; }
+
+    object Value { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        ListBoxData = await UserService.GetUsersAsync();
+        Value = ListBoxData.Where(x => SelectedUsers.Any(y => y.Id == x.Id)).ToList();
+    }
+
+    string QueryText(DropDownBoxQueryDisplayTextContext arg) {
+        var names = (arg.Value as List<User>)?.Select(x => x.FullName);
+        return names != null ? string.Join(",", names) : string.Empty;
+    }
+
+    List<User> GetListBoxValues(IDropDownBox dropDownBox) {
+        return dropDownBox.Value as List<User>;
+    }
+
+    void ListBoxValuesChanged(IEnumerable<User> values, IDropDownBox dropDownBox)
+    {
+        SelectedUsers = values.ToList();
+        dropDownBox.BeginUpdate();
+        dropDownBox.Value = values;
+        dropDownBox.EndUpdate();
+        ValuesChanged?.Invoke(values);
+        //await ProjectService.UpdateProjectAsync();
+    }
+
+    int GetSelectedItemsCount() {
+        if (Value is List<User> value)
+            return value.Count();
+        return 0;
+    }
+    
+}

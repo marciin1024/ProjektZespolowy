@@ -1,0 +1,47 @@
+﻿@rendermode InteractiveServer
+@inject ProjectService ProjectService
+
+<div class="cw-240 ps-3 pt-4">
+    <h5 class="card-title h5-title">Projekty</h5>
+    <DxTreeView AllowSelectNodes="true"
+                CssClass="dxTreeView"
+                AnimationType="LayoutAnimationType.Slide">
+        <Nodes>
+            @foreach (var category in categories)
+            {
+                <DxTreeViewNode Text="@category.Name">
+                    <Nodes>
+                        @if (category.Projects != null && category.Projects.Any())
+                        {
+                            @foreach (var project in category.Projects)
+                            {
+                                        <DxTreeViewNode Text="@project.Name" 
+                                            NavigateUrl="@($"/projects?projectId={project.Id}")" />
+                            }
+                        }
+                        else
+                        {
+                            <DxTreeViewNode Text="Brak projektów" />
+                        }
+                    </Nodes>
+                </DxTreeViewNode>
+            }
+        </Nodes>
+    </DxTreeView>
+</div>
+
+@code {
+    List<Category> categories { get; set; } = new List<Category>();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        if(firstRender)
+        {
+            categories = await ProjectService.GetCategoriesAsync() ?? new List<Category>();
+            StateHasChanged();
+        }
+    }
+}
+

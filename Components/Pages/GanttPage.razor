@@ -1,0 +1,183 @@
+﻿@page "/Gantt"
+@attribute [Authorize(Roles = "Administrator,StandardUser")]
+@rendermode InteractiveServer
+@inject ProjectService ProjectService
+
+<h3>Diagram Gantta</h3>
+<br />
+
+<div class="h-100 w-100">
+  <SfGantt DataSource="@GanttItems" Height="80%" Width="100%" HighlightWeekends="true" TreeColumnIndex="1"
+                ProjectStartDate="@ProjectStartDate" ProjectEndDate="@ProjectEndDate"
+            DurationUnit="DurationUnit.Hour">
+        <GanttTaskFields Id="TaskId" Name="TaskName" StartDate="StartDate" EndDate="EndDate"
+                            Duration="Duration" Progress="Progress" Dependency="Predecessor" ParentID="ParentId">
+        </GanttTaskFields>
+        <GanttColumns>
+            <GanttColumn Field="TaskId"></GanttColumn>
+            <GanttColumn Field="TaskName" Width="250"></GanttColumn>
+            <GanttColumn Field="StartDate"></GanttColumn>
+            <GanttColumn Field="EndDate"></GanttColumn>
+            <GanttColumn Field="Duration"></GanttColumn>
+            <GanttColumn Field="Progress"></GanttColumn>
+        </GanttColumns>
+        <GanttLabelSettings LeftLabel="TaskName" TValue="GanttItem"> </GanttLabelSettings>
+        <GanttSplitterSettings Position="30%"> </GanttSplitterSettings>
+        <GanttTemplates TValue="GanttItem">
+            <TaskbarTemplate>
+                @{
+                var task = (context as GanttItem);
+                }
+                <div class="e-gantt-child-taskbar-inner-div e-gantt-child-taskbar" style="height:22px;width:100%;" tabindex="-1">
+                    <div class="e-gantt-child-progressbar-inner-div e-gantt-child-progressbar" style="height:22px;width:@task.Progress%;border-radius:0; ">
+                        <span class="e-task-label" style="position:absolute;top:3px;font-size:12px;text-overflow:ellipsis;height:90%;overflow:hidden;">
+                            @(task.Progress + "%")
+                        </span>
+                    </div>
+                </div>
+            </TaskbarTemplate>
+            <ParentTaskbarTemplate>
+                @{
+                    var task = (context as GanttItem);
+                }
+                <div class="e-gantt-parent-taskbar-inner-div e-gantt-parent-taskbar" style="height:22px;text-overflow:ellipsis;width:100%;" tabindex="-1">
+                    <div class="e-gantt-parent-progressbar-inner-div e-row-expand e-gantt-parent-progressbar" style="height:22px;text-overflow:ellipsis;width:@task.Progress%;border-radius:0;">
+                        <span class="e-task-label" style="position:absolute;top:3px;font-size:12px;text-overflow:ellipsis;height:90%;overflow:hidden;">
+                            @(task.Progress + "%")
+                        </span>
+                    </div>
+                </div>
+            </ParentTaskbarTemplate>
+        </GanttTemplates>
+    </SfGantt>
+</div>
+
+@code {
+    private DateTime ProjectStartDate { get; set; } = new DateTime(DateTime.Now.Year, 1, 1);
+    private DateTime ProjectEndDate { get; set; } = new DateTime(DateTime.Now.Year, 12, 31);
+    private List<GanttItem> GanttItems { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        // List<Project> projects = await ProjectService.GetAllProjectsAsync();
+
+        // GanttItems = new List<GanttItem>();
+        // foreach(Project project in projects)
+        // {
+        //     GanttItem ganttItemProject = new GanttItem
+        //     {
+        //         TaskId = project.Id,
+        //         TaskName = project.Name,
+        //         StartDate = project.StartAt,
+        //         EndDate = project.DueDate
+        //     };
+        //     GanttItems.Add(ganttItemProject);
+
+        //     foreach(TaskToDo taskToDo in project.Tasks)
+        //     {
+        //         GanttItem ganttItemTask = new GanttItem
+        //         {
+        //             TaskId = taskToDo.Id,
+        //             TaskName = taskToDo.Name,
+        //             StartDate = project.StartAt,
+        //             EndDate = project.DueDate,
+        //             ParentId = project.Id
+        //         };
+        //         GanttItems.Add(ganttItemTask);
+        //     }
+        // }
+    }
+
+    protected override void OnInitialized()
+    {
+        // GanttItems = DefaultData.ProjectNewData();
+        List<Project> projects = ProjectService.GetAllProjects();
+
+        GanttItems = new List<GanttItem>();
+        foreach (Project project in projects)
+        {
+            GanttItem ganttItemProject = new GanttItem
+            {
+                TaskId = project.Id,
+                TaskName = project.Name,
+                StartDate = project.StartAt,
+                EndDate = project.DueDate
+            };
+            GanttItems.Add(ganttItemProject);
+
+            foreach (TaskToDo taskToDo in project.Tasks)
+            {
+                GanttItem ganttItemTask = new GanttItem
+                {
+                    TaskId = taskToDo.Id,
+                    TaskName = taskToDo.Name,
+                    StartDate = taskToDo.StartAt,
+                    EndDate = taskToDo.DueDate,
+                    ParentId = project.Id,
+                };
+
+                if(taskToDo.Status == Status.ToDo)
+                {
+                    ganttItemTask.Progress = 0;
+                }
+
+                if (taskToDo.Status == Status.InProgress)
+                {
+                    if (taskToDo.StartAt >= taskToDo.DueDate
+                        || taskToDo.DueDate is null
+                        || taskToDo.StartAt is null)
+                    {
+                        ganttItemTask.Progress = 0;
+                    }
+                    else
+                    {
+                        DateTime startAt = (DateTime)taskToDo.StartAt;
+                        DateTime dueDate = (DateTime)taskToDo.DueDate;
+
+                        if (startAt < DateTime.Now && DateTime.Now < dueDate)
+                        {
+                            TimeSpan timeSpanTask = dueDate - startAt;
+                            TimeSpan timeSpanDueToday = DateTime.Now - startAt;
+
+                            int percent = (int)Math.Round((timeSpanDueToday.TotalHours / timeSpanTask.TotalHours) * 100);
+                            ganttItemTask.Progress = percent;
+                        }
+                        else if (DateTime.Now > dueDate)
+                        {
+                            ganttItemTask.Progress = 100;
+                        }
+                        else
+                        {
+                            ganttItemTask.Progress = 0;
+                        }
+                    }
+                }
+
+                if (taskToDo.Status == Status.Done)
+                {
+                    ganttItemTask.Progress = 100;
+                }
+
+                GanttItems.Add(ganttItemTask);
+            }
+        }
+    }
+
+    public class GanttItem
+    {
+        public int TaskId { get; set; }
+        public string TaskName { get; set; }
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        public DateTime? BaselineStartDate { get; set; }
+        public DateTime? BaselineEndDate { get; set; }
+        public string Duration { get; set; }
+        public int Progress { get; set; }
+        public string Predecessor { get; set; }
+        public object ResourceId { get; set; }
+        public string Notes { get; set; }
+        public string TaskType { get; set; }
+        public int? ParentId { get; set; }
+    }
+}

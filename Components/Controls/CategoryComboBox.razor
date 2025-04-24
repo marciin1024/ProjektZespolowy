@@ -1,0 +1,37 @@
+﻿@rendermode InteractiveServer
+@inject TaskService TaskService
+@inject ProjectService ProjectService
+
+<DxComboBox Data="@AssignedCategories"
+            SearchMode="@SearchMode"
+            SearchFilterCondition="@SearchFilterCondition"
+            SearchTextParseMode="@SearchTextParseMode"
+            Value="@SelectedCategory"
+            ValueChanged="@((Category category) => SelectedCategoryChanged?.Invoke(category))"
+            TextFieldName="Category"
+            CssClass="cw-480"
+            InputId="cbAssignedUsers" />
+
+@code {
+    [Parameter]
+    public Category SelectedCategory { get; set; }
+
+    [Parameter]
+    public Action<Category> SelectedCategoryChanged { get; set; }
+
+    List<Category> AssignedCategories { get; set; }
+
+    ListSearchMode SearchMode { get; set; } = ListSearchMode.AutoSearch;
+    ListSearchFilterCondition SearchFilterCondition { get; set; } = ListSearchFilterCondition.Contains;
+    ListSearchTextParseMode SearchTextParseMode { get; set; } = ListSearchTextParseMode.GroupWordsByAnd;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AssignedCategories = await ProjectService.GetCategoriesAsync();
+    }
+
+    string GetSelectedValueDescription()
+    {
+        return SelectedCategory != null ? SelectedCategory.Name : "null";
+    }
+}

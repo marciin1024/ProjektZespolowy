@@ -1,0 +1,38 @@
+﻿@rendermode InteractiveServer
+@inject TaskService TaskService
+
+<DxComboBox Data="@Statuses"
+        SearchMode="@SearchMode"
+        SearchFilterCondition="@SearchFilterCondition"
+        SearchTextParseMode="@SearchTextParseMode"
+        Value="@Status"
+        ValueChanged="@((Status status) => SelectedStatusChanged?.Invoke(status))"
+        CssClass="cw-480"
+        InputId="cbFiltering_2" />
+
+@code {
+
+    [Parameter]
+    public List<Status> Statuses { get; set; }
+
+    [Parameter]
+    public Status Status { get; set; }
+
+    [Parameter]
+    public Action<Status> SelectedStatusChanged { get; set; }
+
+    ListSearchMode SearchMode { get; set; } = ListSearchMode.AutoSearch;
+    ListSearchFilterCondition SearchFilterCondition { get; set; } = ListSearchFilterCondition.Contains;
+    ListSearchTextParseMode SearchTextParseMode { get; set; } = ListSearchTextParseMode.GroupWordsByAnd;
+
+    protected override void OnInitialized()
+    {
+        Statuses = Enum.GetValues<Status>().ToList();
+        Status = Statuses.Contains(Status.ToDo) ? Status.ToDo : Statuses.FirstOrDefault();
+    }
+
+    string GetSelectedValueDescription()
+    {
+        return Status != null ? Status.ToString() : "null";
+    }
+}

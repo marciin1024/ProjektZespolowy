@@ -1,0 +1,10 @@
+﻿.h5-title {
+    color: white;
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+::deep .dxTreeView
+{
+    color: white;
+}

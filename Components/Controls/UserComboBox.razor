@@ -1,0 +1,37 @@
+﻿@rendermode InteractiveServer
+@inject TaskService TaskService
+@inject UserService UserService
+
+<DxComboBox Data="@AssignedUsers"
+            SearchMode="@SearchMode"
+            SearchFilterCondition="@SearchFilterCondition"
+            SearchTextParseMode="@SearchTextParseMode"
+            Value="@SelectedUser"
+            ValueChanged="@((User user) => SelectedUserChanged?.Invoke(user))"
+            TextFieldName="FullName"
+            CssClass="cw-480"
+            InputId="cbAssignedUsers" />
+
+@code {
+    [Parameter]
+    public User SelectedUser { get; set; }
+
+    [Parameter]
+    public Action<User> SelectedUserChanged { get; set; }
+
+    List<User> AssignedUsers { get; set; }
+
+    ListSearchMode SearchMode { get; set; } = ListSearchMode.AutoSearch;
+    ListSearchFilterCondition SearchFilterCondition { get; set; } = ListSearchFilterCondition.Contains;
+    ListSearchTextParseMode SearchTextParseMode { get; set; } = ListSearchTextParseMode.GroupWordsByAnd;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AssignedUsers = await UserService.GetUsersAsync();
+    }
+
+    string GetSelectedValueDescription()
+    {
+        return SelectedUser != null ? SelectedUser.FullName : "null";
+    }
+}

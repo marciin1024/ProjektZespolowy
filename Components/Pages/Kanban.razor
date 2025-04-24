@@ -1,0 +1,166 @@
+﻿@page "/kanban"
+@attribute [Authorize(Roles = "Administrator, StandardUser")]
+@rendermode InteractiveServer
+@inject TaskService TaskService
+@inject UserService UserService
+
+
+<h3>Kanban</h3>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <button type="button" class="btn btn-primary" @onclick="AddTask">
+        <i class="bi bi-plus-lg"></i> Dodaj zadanie
+    </button>
+
+    <!-- Filtry -->
+    <div class="d-flex gap-3">
+        <select class="form-select" @bind="selectedPriority">
+            <option value="">Wszystkie priorytety</option>
+            @foreach (TaskPriority priority in Enum.GetValues(typeof(TaskPriority)))
+            {
+                <option value="@priority">@priority</option>
+            }
+        </select>
+
+        <select class="form-select" @bind="selectedUserId">
+            <option value="">Wszyscy użytkownicy</option>
+            @if (availableUsers != null)
+            {
+                @foreach (var user in availableUsers)
+                {
+                    <option value="@user.Id">@user.FullName</option>
+                }
+            }
+        </select>
+    </div>
+</div>
+
+
+<div class="row py-4 h-75">
+    @foreach (Status status in Enum.GetValues(typeof(Status)))
+    {
+        <div class="col-4 h-100">
+            <div class="d-flex justify-content-between align-items-center bg-light-subtle p-3">
+                <h5>@status</h5>
+                <span class="badge bg-secondary">
+                    @(GetFilteredTasks(status).Count())
+                </span>
+            </div>
+            <div class="dropzone bg-light p-3 border border-1 rounded h-100"
+                 ondragover="event.preventDefault();"
+                 @ondrop="@(() => OnDrop(status))">
+                @if (taskList == null)
+                {
+                    <div class="d-flex justify-content-center align-items-center h-100">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var task in GetFilteredTasks(status))
+                    {
+                        <TaskCard Task="@task"
+                                  Users="@availableUsers"
+                                  OnSaveTask="@HandleTaskSave"
+                                  OnDeleteTask="@HandleTaskDelete"
+                                  OnDragStart="@HandleDragStart"
+                                  CssClass="@GetTaskCardClass(task)" />
+                    }
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<TaskToDo>? taskList;
+    private List<User>? availableUsers;
+    private TaskToDo? draggedTask;
+    private string? selectedPriority;
+    private string? selectedUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        taskList = await TaskService.GetAllTasksToDoAsync();
+        availableUsers = await UserService.GetUsersAsync();
+        StateHasChanged();
+    }
+
+    private IEnumerable<TaskToDo> GetFilteredTasks(Status status)
+    {
+        if (taskList == null) return Enumerable.Empty<TaskToDo>();
+
+        var filteredTasks = taskList.Where(t => t.Status == status);
+
+        if (!string.IsNullOrEmpty(selectedPriority) && Enum.TryParse<TaskPriority>(selectedPriority, out var priority))
+        {
+            filteredTasks = filteredTasks.Where(t => t.Priority == priority);
+        }
+
+        if (!string.IsNullOrEmpty(selectedUserId) && int.TryParse(selectedUserId, out var userId))
+        {
+            filteredTasks = filteredTasks.Where(t => t.AssignedToId == userId);
+        }
+
+        return filteredTasks;
+    }
+
+    private string GetTaskCardClass(TaskToDo task)
+    {
+        return task.Status switch
+        {
+            Status.ToDo => "color-todo",
+            Status.InProgress => "color-inprogress",
+            Status.Done => "color-done",
+            _ => "alert-primary"
+        };
+    }
+
+    private void HandleDragStart(TaskToDo task)
+    {
+        draggedTask = task;
+    }
+
+    private async Task OnDrop(Status newStatus)
+    {
+        if (draggedTask != null)
+        {
+            draggedTask.Status = newStatus;
+            draggedTask.UpdatedAt = DateTime.UtcNow;
+            await HandleTaskSave(draggedTask);
+            draggedTask = null;
+        }
+    }
+
+    private async Task AddTask()
+    {
+        TaskToDo newTask = new TaskToDo
+        {
+            Name = "Nowe zadanie",
+            ProjectId = 1,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await TaskService.AddTaskAsync(newTask);
+        await LoadData();
+    }
+
+    private async Task HandleTaskSave(TaskToDo task)
+    {
+        task.UpdatedAt = DateTime.UtcNow;
+        await TaskService.UpdateTaskToDoAsync(task);
+        await LoadData();
+    }
+
+    private async Task HandleTaskDelete(TaskToDo task)
+    {
+        await TaskService.DeleteTaskToDoAsync(task);
+        await LoadData();
+    }
+}

@@ -1,0 +1,35 @@
+﻿@rendermode InteractiveServer
+@inject TaskService TaskService
+
+<DxComboBox Data="@Priorities"
+            SearchMode="@SearchMode"
+            SearchFilterCondition="@SearchFilterCondition"
+            SearchTextParseMode="@SearchTextParseMode"
+            Value="@TaskPriority"
+            ValueChanged="@((TaskPriority priority) => SelectedPriorityChanged?.Invoke(priority))"
+            CssClass="cw-480"
+            InputId="cbFiltering_1" />
+
+@code {
+    [Parameter]
+    public TaskPriority TaskPriority { get; set; }
+
+    [Parameter]
+    public Action<TaskPriority> SelectedPriorityChanged { get; set; }
+
+    public List<TaskPriority> Priorities { get; set; }
+
+    ListSearchMode SearchMode { get; set; } = ListSearchMode.AutoSearch;
+    ListSearchFilterCondition SearchFilterCondition { get; set; } = ListSearchFilterCondition.Contains;
+    ListSearchTextParseMode SearchTextParseMode { get; set; } = ListSearchTextParseMode.GroupWordsByAnd;
+
+    protected override void OnInitialized()
+    {
+        Priorities = Enum.GetValues<TaskPriority>().ToList();
+    }
+
+    string GetSelectedValueDescription()
+    {
+        return TaskPriority != null ? TaskPriority.ToString() : "null";
+    }
+}

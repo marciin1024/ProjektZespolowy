@@ -1,0 +1,118 @@
+﻿@page "/projects"
+@attribute [Authorize(Roles = "Administrator,StandardUser")]
+@using System.Globalization
+@rendermode InteractiveServer
+@inject TaskService TaskService
+@inject UserService UserService
+@inject ProjectService ProjectService
+@inject NavigationManager Navigation
+
+<div class="project-panel">
+    @if (Project != null)
+    {
+        <div class="project-details">
+            <h3>@Project.Name</h3>
+            <div class="details-container">
+                <div class="detail-item">
+                    <p><strong>Data rozpoczęcia:</strong></p>
+                    <p>@Project.StartAt?.ToString("dd-MM-yyyy")</p>
+                </div>
+                <div class="detail-item">
+                    <p><strong>Termin zakończenia:</strong></p>
+                    <p>@Project.DueDate?.ToString("dd-MM-yyyy")</p>
+                </div>
+                <div class="detail-item">
+                    <p><strong>Rozmiar zespołu:</strong></p>
+                    @(Project.UserProjects?.Count ?? 0)
+                </div>
+                <div class="detail-item">
+                    <p><strong>Kategoria:</strong></p>
+                    @(Project.Category?.Name ?? string.Empty)
+                </div>
+                <div class="detail-item">
+                    <p><strong>Właściciel: </strong></p>
+                    @Project.Owner
+                </div>
+                <AuthorizeView Roles="Administrator">
+                    <Authorized>
+                        <div class="detail-item">
+                            <div class="grid-cell-align-center">
+                                <DxButton IconCssClass="grid-icon grid-icon-open"
+                                          RenderStyle="ButtonRenderStyle.None"
+                                          Click="@(() => ShowProjectForm())" />
+                            </div>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+                
+            </div>
+        </div>
+    }
+    else
+    {
+        <p>Nie wybrano projektu.</p>
+    }
+</div>
+
+<div class="cw-480 ch-220">
+    <DxTabs @bind-ActiveTabIndex="@ActiveTabIndex">
+        <DxTab Text="Lista"></DxTab>
+        <DxTab Text="Kanban"></DxTab>
+        <DxTab Text="Kalendarz"></DxTab>
+    </DxTabs>
+    <div class="card tabs-border-top-0 tabs-border-radius-top-0;" style="min-height: 190px; border: none">
+        <div class="card-body">
+            @switch (ActiveTabIndex)
+            {
+                case 0:
+                    <ProjectListView ProjectId="ProjectId"></ProjectListView>
+                    break;
+                case 1:
+                    <ProjectKanbanView ProjectId="ProjectId"></ProjectKanbanView>
+                    break;
+                case 2:
+                    <ProjectSchedulerView ProjectId="ProjectId"></ProjectSchedulerView>
+                    break;
+            }
+        </div>
+    </div>
+</div>
+
+<ProjectForm
+    Project="Project"
+    Visible="ProjectFormVisible" 
+    SetVisiblity="SetVisiblity" 
+    SavedAsync="OnSavedAsync"/>
+
+@code {
+
+    [SupplyParameterFromQuery(Name = "projectId")]
+    public int ProjectId { get; set; }
+
+    Project Project;
+    int ActiveTabIndex { get; set; } = 0;
+    public bool ProjectFormVisible { get; set; } = false;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        Project = await ProjectService.GetProjectByIdAsync(ProjectId);
+        StateHasChanged();
+    }
+
+    private void ShowProjectForm()
+    {
+        ProjectFormVisible = true;
+    }
+
+    public void SetVisiblity(bool visibility)
+    {
+        ProjectFormVisible = visibility;
+        StateHasChanged();
+    }
+
+    async Task OnSavedAsync()
+    {
+        Project = await ProjectService.GetProjectByIdAsync(ProjectId);
+        StateHasChanged();
+    }
+}

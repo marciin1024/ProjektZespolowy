@@ -1,0 +1,115 @@
+﻿@using Microsoft.AspNetCore.Identity
+@inherits LayoutComponentBase
+@inject NavigationManager NavigationManager
+@inject ProjectService ProjectService
+@inject IHttpContextAccessor HttpContextAccessor
+@inject UserManager<User> UserManager;
+
+<div class="page">
+    <AuthorizeView>
+        <Authorized>
+            <Drawer DrawerHeader="drawerHeader" DrawerFooter="drawerFooter">
+                <DrawerBody>
+                    <div class="w-100">
+                        <NavMenu></NavMenu>
+                        <ProjectSelection></ProjectSelection>
+                    </div>
+                </DrawerBody>
+                <DrawerTarget>
+                    <div class="nav-buttons-container" style="height: 10%;">
+                        <NavLink href="@UrlGenerator.GetUrl(new Uri(NavigationManager.Uri).LocalPath, !ToggledSidebar)">
+                            <DxButton RenderStyle="@ButtonRenderStyle.Secondary" RenderStyleMode="@ButtonRenderStyleMode.Text" CssClass="menu-button" IconCssClass="icon icon-menu"></DxButton>
+                        </NavLink>
+                        @if (new Uri(NavigationManager.Uri).LocalPath != "/")
+                        {
+                            <NavLink href="@UrlGenerator.GetUrl("/", ToggledSidebar)" class="button-link hidden">
+                                <DxButton RenderStyle="@ButtonRenderStyle.Dark" Text="Powrót do strony głównej" RenderStyleMode="@ButtonRenderStyleMode.Text" CssClass="menu-button-nav" IconCssClass="icon icon-back"></DxButton>
+                            </NavLink>
+                        }
+                    </div>
+                    <div class="px-4" style="height: 90%;">
+                        @Body
+                    </div>
+                </DrawerTarget>
+            </Drawer>
+        </Authorized>
+        <NotAuthorized>
+            <Drawer DrawerHeader="drawerHeader">
+                <DrawerBody>
+                    <div class="w-100">
+                        <NavMenu></NavMenu>
+                    </div>
+                </DrawerBody>
+                <DrawerTarget>
+                    <div class="px-4" style="height: 90%;">
+                        @Body
+                    </div>
+                </DrawerTarget>
+            </Drawer>
+        </NotAuthorized>
+    </AuthorizeView>
+</div>
+
+@code {
+    List<Category> categories { get; set; } = new List<Category>();
+
+    [SupplyParameterFromQuery(Name = UrlGenerator.ToggleSidebarName)]
+    public bool ToggledSidebar { get; set; }
+
+    private string _fullName;
+    private string _roleName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        int currentUserId = GetCurrentUserId();
+        if(currentUserId != 0)
+        {
+            User user = await UserManager.FindByIdAsync(currentUserId.ToString());
+            if(user is not null)
+            {
+                _fullName = user.FullName;
+                IList<string> roles = await UserManager.GetRolesAsync(user);
+
+                if (roles.Any(x => x == "Administrator"))
+                {
+                    _roleName = "Kierownik projektu";
+                }
+                else
+                {
+                    _roleName = "Członek zespołu";
+                }
+            }
+        }
+    }
+
+    private RenderFragment drawerHeader => @<div class="navigation-drawer-header">
+        <NavLink href="@UrlGenerator.GetUrl(new Uri(NavigationManager.Uri).LocalPath, !ToggledSidebar)">
+            <DxButton RenderStyle="@ButtonRenderStyle.Light" RenderStyleMode="@ButtonRenderStyleMode.Text" CssClass="menu-button-nav" IconCssClass="@(ToggledSidebar ? "icon icon-close" : "icon icon-menu")"></DxButton>
+        </NavLink>
+    </div>;
+
+    private RenderFragment drawerFooter => @<div class="pb-5">
+    <div class="viewcard">    
+    <p>@_fullName</p>
+    <p>@_roleName</p>
+    </div>
+        <div class=wyloguj>
+        <NavLink href="/Account/Logout" class="button-link">
+            <DxButton Text="Wyloguj" RenderStyleMode="@ButtonRenderStyleMode.Text" CssClass="footer-button" RenderStyle="@ButtonRenderStyle.Light" IconCssClass="icon-log-out"></DxButton>
+        </NavLink>
+    </div>
+    </div>
+    ;
+
+    private int GetCurrentUserId()
+    {
+        var claimId = HttpContextAccessor.HttpContext.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
+        if(claimId is null)
+        {
+            return 0;
+        }
+        return int.Parse(claimId.Value);
+    }
+}

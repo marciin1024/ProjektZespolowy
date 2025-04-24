@@ -1,0 +1,33 @@
+﻿@rendermode InteractiveServer
+@inject TaskService TaskService
+@inject ProjectService ProjectService
+
+<DxTagBox TData="Tag"
+          TValue="Tag"
+          Data="@Data"
+          Values="@SelectedTags"
+          ValuesChanged="@OnValuesChanged"
+          TextFieldName="@nameof(Tag.Name)"
+          KeyFieldName="@nameof(Tag.Id)"
+          CssClass="cw-480" />
+
+@code {
+    [Parameter]
+    public Action<IEnumerable<Tag>> SelectedTagsChanged { get; set; }
+
+    IEnumerable<Tag> SelectedTags { get; set; } = [];
+
+    List<Tag> Data { get; set; } = [];
+
+    protected override void OnInitialized()
+    {
+        Data = TaskService.GetTags();
+    }
+
+    void OnValuesChanged(IEnumerable<Tag> tags)
+    {
+        SelectedTags = tags;
+        SelectedTagsChanged?.Invoke(tags);
+        StateHasChanged();
+    }
+}

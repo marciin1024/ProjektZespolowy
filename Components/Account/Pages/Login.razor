@@ -1,0 +1,75 @@
+﻿@page "/Login"
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Identity
+
+@inject SignInManager<User> SignInManager
+@inject ILogger<Login> Logger
+@inject NavigationManager NavigationManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Log in</PageTitle>
+
+<div class="h-100 w-100 d-flex justify-content-center align-items-center">
+    <div id="loginContainer">
+        <StatusMessage Message="@errorMessage" />
+        <EditForm class="d-flex flex-column" Model="Input" OnValidSubmit="LoginUser" FormName="login" Context="Login">
+            <DataAnnotationsValidator />
+            <div class="w-100">
+                <div class="loginTitle">Logowanie</div>
+                <InputText type="text"
+                           placeholder="login"
+                           onfocus="this.placeholder=''"
+                           onblur="this.placeholder='email'"
+                           @bind-Value="Input.Login" />
+                <ValidationMessage For="() => Input.Login" />
+            </div>
+            <div class="w-100">
+                <InputText type="password"
+                            placeholder="hasło"
+                            onfocus="this.placeholder=''"
+                            onblur="this.placeholder='hasło'"
+                            @bind-Value="Input.Password" />
+                <ValidationMessage For="() => Input.Password" />
+            </div>
+            <button type="submit">Zaloguj się</button>
+            <div class="registerProposition">Nie masz konta?<a class="register" href="@(NavigationManager.GetUriWithQueryParameters("/register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))"> Zarejestruj się</a></div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private string? errorMessage;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    public async Task LoginUser() {
+        var result = await SignInManager.PasswordSignInAsync(Input.Login, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+        if(result.Succeeded) {
+            Logger.LogInformation("User logged in.");
+            RedirectManager.RedirectTo(ReturnUrl);
+        } else if(result.IsLockedOut) {
+            Logger.LogWarning("User account locked out.");
+            RedirectManager.RedirectTo("Account/Lockout");
+        } else {
+            errorMessage = "Error: Invalid login attempt.";
+        }
+    }
+
+    private sealed class InputModel {
+        [Required]
+        public string Login { get; set; } = "";
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+
+        [Display(Name = "Remember me?")]
+        public bool RememberMe { get; set; }
+    }
+}

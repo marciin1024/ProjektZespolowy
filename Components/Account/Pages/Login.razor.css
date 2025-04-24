@@ -1,0 +1,81 @@
+﻿
+::deep .loginTitle {
+    font-size: 30px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+::deep #loginContainer {
+    background-color: white;
+    font-family: "Open Sans", sans-serif;
+    padding: 50px;
+    margin-left: auto;
+    margin-right: auto;
+    box-shadow: 3px 3px 30px 5px rgba(204,204,204,0.9);
+}
+
+::deep input[type=Email],
+::deep input[type=Text],
+::deep input[type=Password] {
+    width: 300px;
+    background-color: #efefef;
+    color: #333333;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    font-size: 20px;
+    padding: 10px;
+    box-sizing: border-box;
+    outline: none;
+    margin-top: 10px;
+}
+
+    ::deep input[type=Email]:focus,
+    ::deep input[type=Text]:focus,
+    ::deep input[type=Password]:focus {
+        box-shadow: 0px 0px 10px 2px rgba(204,204,204,0.9);
+        border: 2px solid #E2BD70;
+        background-color: #fbf9eb;
+        color: #333333;
+    }
+
+::deep button[type=submit] {
+    width: 300px;
+    background-color: #f2b84b;
+    font-size: 20px;
+    color: white;
+    padding: 15px 10px;
+    margin-top: 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    outline: none;
+}
+
+::deep input[type=Submit]:focus {
+    box-shadow: 0px 0px 15px 5px rgba(204,204,204,0.9);
+}
+
+::deep input[type=Submit]:hover {
+    background-color: #E2BD70
+}
+
+.registerProposition {
+    padding-top: 20px;
+    text-decoration: none;
+    text-align: center;
+}
+
+.registerProposition {
+    padding-top: 20px;
+    text-decoration: none;
+    text-align: center;
+}
+
+.register {
+    color: #f2b84b;
+}
+
+.register:hover {
+    color: #E2BD70;
+}

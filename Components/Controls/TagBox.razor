@@ -1,0 +1,56 @@
+﻿@rendermode InteractiveServer
+@inject TaskService TaskService
+@inject ProjectService ProjectService
+
+<DxTagBox TData="Tag"
+          TValue="Tag"
+          Data="@Data"
+          Values="@SelectedTags"
+          ValuesChanged="@OnValuesChanged"
+          TextFieldName="@nameof(Tag.Name)"
+          KeyFieldName="@nameof(Tag.Id)"
+          SearchMode="@SearchMode"
+          SearchFilterCondition="@SearchFilterCondition"
+          SearchTextParseMode="@SearchTextParseMode"
+          CssClass="cw-480" />
+
+@code {
+    [Parameter]
+    public int TaskId { get; set; } // Identyfikator projektu
+
+    [Parameter]
+    public IEnumerable<Tag> SelectedTags { get; set; } = new List<Tag>();
+
+    [Parameter]
+    public Action<IEnumerable<Tag>> SelectedTagsChanged { get; set; }
+
+    ListSearchMode SearchMode { get; set; } = ListSearchMode.AutoSearch;
+    ListSearchFilterCondition SearchFilterCondition { get; set; } = ListSearchFilterCondition.Contains;
+    ListSearchTextParseMode SearchTextParseMode { get; set; } = ListSearchTextParseMode.GroupWordsByAnd;
+
+    List<Tag> Data { get; set; } = [];
+
+    protected override void OnParametersSet()
+    {
+        if (TaskId != 0)
+        {
+            SelectedTags = TaskService.GetTaskTags(TaskId);
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        Data = TaskService.GetTags();
+
+        if (TaskId != 0)
+        {
+            SelectedTags = TaskService.GetTaskTags(TaskId);
+        }
+    }
+
+    void OnValuesChanged(IEnumerable<Tag> tags)
+    {
+        SelectedTags = tags;
+        SelectedTagsChanged?.Invoke(tags);
+    }
+}

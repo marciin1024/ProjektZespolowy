@@ -1,0 +1,26 @@
+﻿﻿<div id="sidebar">
+
+    <AuthorizeView>
+        <Authorized>
+            <DxMenu Orientation="@Orientation.Vertical" CssClass="menu">
+                <Items>
+                    <DxMenuItem NavigateUrl="/list" Text="Lista" CssClass="menu-item"></DxMenuItem>
+                </Items>
+            </DxMenu>
+        </Authorized>
+        <NotAuthorized>
+            <DxMenu Orientation="@Orientation.Vertical" CssClass="menu">
+                <Items>
+                    <DxMenuItem NavigateUrl="/login" Text="Logowanie" CssClass="menu-item" IconCssClass="icon home-icon"></DxMenuItem>
+                    <DxMenuItem NavigateUrl="/register" Text="Rejestracja" CssClass="menu-item" IconCssClass="icon weather-icon"></DxMenuItem>
+                </Items>
+            </DxMenu>
+        </NotAuthorized>
+    </AuthorizeView>
+</div>
+
+
+@code {
+    [SupplyParameterFromQuery(Name = UrlGenerator.ToggleSidebarName)]
+    public bool ToggledSidebar { get; set; }
+}

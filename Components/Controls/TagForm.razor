@@ -1,0 +1,67 @@
+﻿@inject TaskService TaskService
+
+<DxPopup
+    @bind-Visible="@Visible"
+    ShowFooter="true"
+    HeaderText="Dodaj nowy tag:"
+    CloseButtonClick="OnCloseButtonClick">
+    <BodyContentTemplate Context="PopupContext">
+    <BodyTemplate>
+        <div style="padding-top: 1rem; padding-bottom: 1rem">
+            <DxFormLayout>
+                    <DxFormLayoutItem Caption="Nazwa tagu:" ColSpanMd="12">
+                        <Template>
+                            <DxTextBox @bind-Text="@TagName" />
+                        </Template>
+                    </DxFormLayoutItem>
+            </DxFormLayout>
+        </div>
+    </BodyTemplate>
+    </BodyContentTemplate>
+    <FooterContentTemplate>
+        <DxButton CssClass="popup-button my-1 ms-2" RenderStyle="ButtonRenderStyle.Primary" Text="OK" Click="OnOkButtonClick" />
+        <DxButton CssClass="popup-button my-1 ms-2" RenderStyle="ButtonRenderStyle.Secondary" Text="Cancel" Click="@(() => Visible = false)" />
+    </FooterContentTemplate>
+</DxPopup>
+
+@code {
+    [Parameter]
+    public bool Visible { get; set; } = false;
+
+    [Parameter]
+    public Tag Tag { get; set; } = new Tag();
+
+    private Tag _tag;
+    private string _tagName;
+
+    [Parameter]
+    public Action<bool> SetTagVisiblity { get; set; }
+
+    private string TagName
+    {
+        get => _tagName;
+        set
+        {
+            _tagName = value;
+            _tag.Name = value;
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        _tag = Tag ?? new Tag();
+        _tagName = _tag.Name ?? string.Empty;
+    }
+    
+    private async Task OnOkButtonClick()
+    {
+
+        await TaskService.AddTagAsync(_tag);
+        SetTagVisiblity?.Invoke(false);
+    }
+
+    void OnCloseButtonClick()
+    {
+        SetTagVisiblity?.Invoke(false);
+    }
+}

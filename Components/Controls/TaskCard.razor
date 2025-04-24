@@ -1,0 +1,161 @@
+﻿@rendermode InteractiveServer
+
+<div class="draggable alert @CssClass" draggable="true" @ondragstart="OnDragStartHandler">
+    <div class="d-flex flex-column w-100">
+        <!-- Task Name -->
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            @if (IsEditing)
+            {
+                <input type="text" class="form-control me-2"
+                       @bind="Task.Name"
+                       @onblur="OnSave"
+                       @onkeydown="HandleKeyPress" />
+            }
+            else
+            {
+                <strong @onclick="EnableEditing" class="flex-grow-1">@Task.Name</strong>
+            }
+            <button type="button" class="btn-close" @onclick="OnDelete" title="Usuń zadanie"></button>
+        </div>
+
+        <!-- Priority -->
+        <div class="d-flex align-items-center mb-2">
+            <small class="text-muted me-2">Priorytet:</small>
+            @if (IsEditingPriority)
+            {
+                <select class="form-select form-select-sm" style="width: auto;"
+                        @bind="Task.Priority"
+                        @onblur="OnSavePriority">
+                    @foreach (TaskPriority priority in Enum.GetValues<TaskPriority>())
+                    {
+                        <option value="@priority">@priority</option>
+                    }
+                </select>
+            }
+            else
+            {
+                <span @onclick="EnablePriorityEditing" class="badge @GetPriorityClass()">@Task.Priority</span>
+            }
+        </div>
+
+        <!-- Assigned To -->
+        <div class="d-flex align-items-center">
+            <small class="text-muted me-2">Przypisane do:</small>
+            @if (IsEditingAssignedTo)
+            {
+                <select class="form-select form-select-sm" style="width: auto;"
+                        @bind="Task.AssignedTo.Id"
+                        @onblur="OnSaveAssignedTo">
+                    @if (Users != null)
+                    {
+                        @foreach (var user in Users)
+                        {
+                            <option value="@user.Id">@user.FullName</option>
+                        }
+                    }
+                </select>
+            }
+            else
+            {
+                <span @onclick="EnableAssignedToEditing">
+                    @(Task.AssignedTo?.FullName ?? "Nieprzypisane")
+                </span>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public TaskToDo Task { get; set; } = default!;
+    
+    [Parameter]
+    public EventCallback<TaskToDo> OnSaveTask { get; set; }
+
+    [Parameter]
+    public EventCallback<TaskToDo> OnDeleteTask { get; set; }
+
+    [Parameter]
+    public EventCallback<TaskToDo> OnDragStart { get; set; }
+
+    [Parameter]
+    public string CssClass { get; set; } = "alert-secondary";
+
+    [Parameter]
+    public List<User> Users { get; set; }
+
+    private bool IsEditing { get; set; } = false;
+    private bool IsEditingPriority { get; set; } = false;
+    private bool IsEditingDueDate { get; set; } = false;
+    private bool IsEditingAssignedTo { get; set; } = false;
+
+    private string GetPriorityClass()
+    {
+        return Task.Priority switch
+        {
+            TaskPriority.Niski => "bg-success",
+            TaskPriority.Średni => "bg-warning",
+            TaskPriority.Wysoki => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private void EnableEditing() => IsEditing = true;
+    private void EnablePriorityEditing() => IsEditingPriority = true;
+    private void EnableDueDateEditing() => IsEditingDueDate = true;
+    private void EnableAssignedToEditing() => IsEditingAssignedTo = true;
+
+    private async Task OnSave()
+    {
+        IsEditing = false;
+        await SaveChanges();
+    }
+
+    private async Task OnSavePriority()
+    {
+        IsEditingPriority = false;
+        await SaveChanges();
+    }
+
+    private async Task OnSaveAssignedTo()
+    {
+        IsEditingAssignedTo = false;
+        await SaveChanges();
+    }
+
+    private async Task SaveChanges()
+    {
+        if (OnSaveTask.HasDelegate)
+        {
+            await OnSaveTask.InvokeAsync(Task);
+        }
+    }
+
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await OnSave();
+        }
+        else if (e.Key == "Escape")
+        {
+            IsEditing = false;
+        }
+    }
+
+    private async Task OnDragStartHandler()
+    {
+        if (OnDragStart.HasDelegate)
+        {
+            await OnDragStart.InvokeAsync(Task);
+        }
+    }
+
+    private async Task OnDelete()
+    {
+        if (OnDeleteTask.HasDelegate)
+        {
+            await OnDeleteTask.InvokeAsync(Task);
+        }
+    }
+}
